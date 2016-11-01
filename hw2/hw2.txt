@@ -1,0 +1,27 @@
+My program does not handle well the cases where the start symbol and the first
+symbol of its rule are the same type of symbole. An example of this is:
+
+	let my_grammar1 =
+	  (Expr,
+	   function
+	     | Expr ->
+	        [[N Expr; N Term; N Binop]; 
+	        [N Binop]]
+	     | Term ->
+	        [[N Num];
+	        [N Num; N Term]]
+	     | Binop ->
+	        [[T"+"];
+	        [T"-"]]
+	     | Num ->
+	        [[T"0"]; [T"1"]; [T"2"]; [T"3"]; [T"4"];
+	        [T"5"]; [T"6"]; [T"7"]; [T"8"]; [T"9"]]);;
+
+The part of the grammar with 
+	function | Expr -> [N Expr; N Term; N Binop] 
+causes problems since my program gets into an infinite loop going from 
+Expr to Expr.
+
+This issue does not occur if the symbol which is the same type as the
+start symbol appears either in the middle or the end of the list. Only
+when the first item is the same as the start symbol then problems occur.
