@@ -1,0 +1,3 @@
+In signal_message I removed errors based on the assumption that an error can be a word.
+
+My program has issues with edge cases where there are spaces that should not be there, such as leading or trailing spaces or letter boundries.
