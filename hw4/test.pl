@@ -33,13 +33,29 @@
     remove_delim([delimiter|T], L) :- remove_delim(T, L), !.
     remove_delim([H|T], [H|T2]) :- remove_delim(T, T2).
 
+    reverse_message(I, Res) :- reverse_helper(I, Res, []).
+    reverse_helper([],Z,Z).
+    reverse_helper([H|T],Z,Acc) :- reverse_helper(T,Z,[H|Acc]).
+
+    append_helper([], L2, L2).
+    append_helper([H|T], L2, [H|L3]) :- append(T, L2, L3).
+    
     signal_morse(Bits, Res) :- compress(Bits, Temp), remove_delim(Temp, Res).
 
     convert([], Curr, [Res]) :- morse(Res, Curr).
+    convert([#], [], [#]).
+    convert([#], Curr, [A|[#]]) :- morse(A, Curr).
     convert([^|T], Curr, [R|Res]) :- morse(R, Curr), convert(T, [], Res).
-    convert([H|T], Curr, Res) :- convert(T, [H|Curr], Res), !.
+    %convert([#|T], Curr, [A|[#|Res]]) :- morse(A, Curr), convert(T, [], Res).
+    convert([#|T], Curr, [A|[#|Res]]) :- morse(A,Curr), convert(T, [], Res).
+    %convert([H,#|T], Curr, [O|[#,Res]]) :- append_helper(Curr, [H], O), morse(R, O), convert(T, [], Res), !.
+    convert([H|T], Curr, Res) :- append_helper(Curr, [H], Temp), convert(T, Temp, Res), !.
     
-    signal_message(Z, Res) :- convert(Z, [], Res).
+    
+    
+    t(I,O) :- convert(I, [], O).
+    
+    signal_message(Z, Res) :- signal_morse(Z, Temp), convert(Temp, [], Res).
         
 
 morse(a, [.,-]) :- !.           % A
@@ -102,3 +118,5 @@ morse(ct, [-,.,-,.,-]) :- !.          % CT (starting signal, Copy This)
 morse(sk, [.,.,.,-,.,-]) :- !.        % SK (end of work, Silent Key)
 morse(sn, [.,.,.,-,.]) :- !.          % SN (understood, Sho' 'Nuff)
 
+morse(#, [#]) :- !.
+%morse(Out, [#|_]) :- morse(R, Curr), append_helper(R, [#], Out)!.
