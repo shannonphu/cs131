@@ -49,11 +49,7 @@
     convert([#|T], Curr, [A|[#|Res]]) :- morse(A,Curr), convert(T, [], Res).
     convert([H|T], Curr, Res) :- append_helper(Curr, [H], Temp), convert(T, Temp, Res), !.
     
-    
     t(I,O) :- convert(I, [], O). % for debugging from morse to letters
-    
-    signal_message(Z, Res) :- signal_morse(Z, Temp), convert(Temp, [], Res).
-        
 
     % error handling
     filter_errors([], Word, Word).
@@ -61,8 +57,8 @@
     filter_errors([error|T], Word, Res) :- Word \= [], filter_errors(T, [], Res).
     filter_errors([H|T], Word, Res) :- append_helper(Word, [H], Out), filter_errors(T, Out, Res), !.
     
-    %filter_errors([error|T], Word, Res).
-    %filter_errors(M, Word, Res).
+    signal_message(Z, Res) :- signal_morse(Z, Temp), convert(Temp, [], Temp2), filter_errors(Temp2, [], Res).
+
 
 morse(a, [.,-]) :- !.           % A
 morse(b, [-,.,.,.]) :- !.	   % B
