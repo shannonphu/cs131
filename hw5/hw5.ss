@@ -1,3 +1,12 @@
+#lang racket
+(define ils (append '(a e i o u) 'y))
+(define d1 (cons ils (cdr (cdr ils))))
+(define d2 (cons ils ils))
+(define d3 (cons ils (append '(a e i o u) 'y)))
+(define d4 (cons '() ils))
+(define d5 0)
+
+
 (define null-ld?
         (lambda(ls) (eq? (car ls) (cdr ls)))
 )
@@ -11,30 +20,30 @@
 
 (define listdiff? (lambda(ls) (if (pair? ls) (listdiff_helper? (car ls) (cdr ls)) #f)))
 
-(define car-ld-helper 
+(define diff-helper 
         (lambda (ls1 ls2)
-                     (if (equal? (car ls1) (car ls2)) '()
-                     (cons (car ls1) (car-ld-helper (cdr ls1) ls2)))
-        ))
-
-(define get-diff
-        (lambda (ls)
-                (car-ld-helper (car ls) (cdr ls))
-        ))
-
-(define car-ld
-        (lambda (ls) (car (get-diff ls)))
+             (if (not (empty? ls2)) 
+                     (if (not (equal? (car ls1) (car ls2)))
+                     (cons (car ls1) (diff-helper (cdr ls1) ls2))
+                     '()
+        ) ls1))
 )
 
-(define listdiff2 (lambda (h . t)
-        (if (eq? (car h) (car t)) '()
-        (cons (car h) (listdiff2 (cdr h) t)))
-))
+(define car-ld
+        (lambda (ls) (car (diff-helper (car ls) (cdr ls))))
+)
 
-(define listdiff-helper (lambda (h . t)
-        (if (null? (cdr h)) h
-        (cons h (listdiff-helper (car t) (cdr t)))
+(define (cdr-ld ls) (cdr (diff-helper (car ls) (cdr ls))))
+
+(define (listdiff-helper obj . args)
+        (if (empty? (car args)) obj
+            (cons obj (listdiff-helper (car args) (cdr args)))
         )
-))
+)
 
-(define listdiff (lambda (ls) (cons (listdiff-helper X) '())))
+(define listdiff (lambda (h . t) (cons (listdiff-helper h t) '())))
+
+(define d6 (listdiff ils d1 37))
+
+
+
