@@ -30,10 +30,16 @@
 )
 
 (define car-ld
-        (lambda (ls) (car (diff-helper (car ls) (cdr ls))))
+        (lambda (ls) (if (empty? (diff-helper (car ls) (cdr ls))) '()
+                         (car (diff-helper (car ls) (cdr ls)))
+        ))
 )
 
 (define (cdr-ld ls) (cdr (diff-helper (car ls) (cdr ls))))
+
+(define (length-ld ls) (length (diff-helper (car ls) (cdr ls))))
+
+(define (cons-ld obj ld) (cons (cons obj (car ld)) (cdr ld)))
 
 (define (listdiff-helper obj . args)
         (if (empty? (car args)) obj
@@ -45,5 +51,24 @@
 
 (define d6 (listdiff ils d1 37))
 
+(define (append-ld h . t)
+  (if (empty? (car t)) h
+  (append (diff-helper (car h) (cdr h)) (car (append-ld (car t) (cdr t))))))
 
+(define kv1 (cons d1 'a))
+(define kv2 (cons d2 'b))
+(define kv3 (cons d3 'c))
+(define kv4 (cons d1 'd))
+(define d8 (listdiff kv1 kv2 kv3 kv4))
 
+(define (assq-ld-pair p obj)
+  (if (not (pair? p)) #f
+  (if (equal? p obj) #t (assq-ld-pair (car p) obj))))
+
+(define (assq-ld-helper obj lf)
+  (if (empty? lf) #f
+  (if (assq-ld-pair (car lf) obj) (car lf)
+      (assq-ld-helper obj (cdr lf)))))
+
+(define (assq-ld obj lf)
+  (assq-ld-helper obj (car lf)))
