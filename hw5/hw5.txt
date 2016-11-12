@@ -1,0 +1,1 @@
+My implementations may not work for edge cases in longer input or on empty/invalid listdiffs passed in. My implementation may not be completely accurate in comparing for eq? rather than equal?.
