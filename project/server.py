@@ -166,6 +166,7 @@ class HerdClient(protocol.ClientFactory):
 def main():
     if len(sys.argv) != 2:
         print "Error! You need a servername argument!"
+        print "Call signature: python server.py [Alford, Ball, Welsh, Holiday, Hamilton]"
         return
 
     factory = HerdServer(sys.argv[1])
