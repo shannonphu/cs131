@@ -1,5 +1,4 @@
-import sys
-import time
+import sys, time, logging
 from datetime import datetime
 from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
@@ -31,25 +30,28 @@ class HerdServerProtocol(LineReceiver):
         command = line.split()
 
         if command[0] == "IAMAT":
-            # print "got an IAMAT"
             self.handleIAMAT(command[1:])
         elif command[0] == "WHATSAT":
-            # print "got a WHATSAT"
             self.handleWHATSAT(command[1:])
         elif command[0] == "AT":
-            # print "got an AT"
             self.handleAT(command[1:])
         else:
-            print "? {0}".format(command)
+            log = "? {0}".format(line)
+            print log
+            logging.error(log)
 
 
     # ie. IAMAT kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
     def handleIAMAT(self, args):
         if len(args) != 3:
             print "IAMAT requires 3 parameters"
+            logging.error("IAMAT requires 3 parameters")
             return
+
         client_location, lat_lon, timestamp = args
-        print "{0} says location: {1}, lat-lon: {2}, timestamp: {3}".format(self.factory.server_name, client_location, lat_lon, timestamp)
+        log = "{0} server received from client location: {1}, lat-lon: {2}, timestamp: {3}".format(self.factory.server_name, client_location, lat_lon, timestamp)
+        print log
+        logging.info(log)
 
         # Format AT response
         time_difference = time.mktime(datetime.now().timetuple()) - float(timestamp)
@@ -78,7 +80,9 @@ class HerdServerProtocol(LineReceiver):
         if (client_location in self.factory.clients) and (timestamp <= self.factory.clients[client_location]["timestamp"]):
             return
 
-        print "{0} received AT from {1}: ".format(self.factory.server_name, servername)
+        log = "{0} received AT {1} {2} {3} {4} {5}: ".format(self.factory.server_name, servername, time_difference, client_location, lat_lon, timestamp)
+        print log
+        logging.info(log)
         message = "AT {0} {1} {2} {3} {4}".format(servername, time_difference, client_location, lat_lon, timestamp)
         self.factory.clients[client_location] = { "message" : message, "timestamp" : timestamp }
         self.notifyNeighborsLocationChanged(message)
@@ -87,7 +91,9 @@ class HerdServerProtocol(LineReceiver):
         neighbors = SERVERS[self.factory.server_name]["neighbors"]
         for n in neighbors:
             reactor.connectTCP('localhost', SERVERS[n]["port"], HerdClient(message))
-            print "{0} sends location update to {1}".format(self.factory.server_name, n)
+            log = "{0} sends location update to {1}".format(self.factory.server_name, n)
+            print log
+            logging.info(log)
 
 
 
@@ -96,12 +102,15 @@ class HerdServer(protocol.ServerFactory):
         self.connections = 0
         self.server_name = server_name
         self.clients = {}
+        logging.basicConfig(filename = server_name + "-debug.log", level=logging.DEBUG)
+        log = '{0} server started at port {1}'.format(self.server_name, SERVERS[self.server_name]["port"])
+        logging.info(log)
 
     def buildProtocol(self, addr):
         return HerdServerProtocol(self)
 
     def stopFactory(self):
-        print "server shutdown"
+        logging.info("{0} server exited".format(self.server_name))
 
 #####################
 class HerdClientProtocol(LineReceiver):
@@ -121,7 +130,6 @@ class HerdClient(protocol.ClientFactory):
 
     def buildProtocol(self, addr):
         return HerdClientProtocol(self)
-
 #######################
 
 def main():
@@ -134,6 +142,5 @@ def main():
     reactor.run()
 
 
-# this only runs if the module was *not* imported
 if __name__ == '__main__':
     main()
