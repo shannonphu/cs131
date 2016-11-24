@@ -5,11 +5,21 @@ from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
 
 SERVERS = {
-    "Alford"   : 12201, 
-    "Ball"     : 12202, 
-    "Hamilton" : 12203, 
-    "Holiday"  : 12204, 
-    "Welsh"    : 12205
+    "Alford"   : { "port" : 12201,
+                   "neighbors": ["Hamilton", "Welsh"]
+                 }, 
+    "Ball"     : { "port" : 12202,
+                   "neighbors": ["Holiday", "Welsh"]
+                 },
+    "Hamilton" : { "port" : 12203,
+                   "neighbors": ["Holiday"]
+                 },
+    "Holiday"  : { "port" : 12204,
+                   "neighbors": ["Hamilton", "Ball"]
+                 }, 
+    "Welsh"    : { "port" : 12205,
+                   "neighbors": ["Alford", "Ball"]
+                 }
 }
 
 class HerdServerProtocol(LineReceiver):
@@ -17,51 +27,79 @@ class HerdServerProtocol(LineReceiver):
         self.factory = factory
 
     def lineReceived(self, line):
-        print "Line received: {0}".format(line)
+        # print "Line received: {0}".format(line)
 
         # Get command from first word
         command = line.split()
 
-        # ie. IAMAT kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
         if command[0] == "IAMAT":
-            print "got an IAMAT"
+            # print "got an IAMAT"
             self.handleIAMAT(command[1:])
         elif command[0] == "WHATSAT":
-            print "got a WHATSAT"
+            # print "got a WHATSAT"
             self.handleWHATSAT(command[1:])
+        elif command[0] == "AT":
+            # print "got an AT"
+            self.handleAT(command[1:])
         else:
             print "unrecognized command"
 
-        reactor.connectTCP('localhost', 8080, HerdClient(line))
+        # reactor.connectTCP('localhost', 8080, HerdClient(line))
 
+    # ie. IAMAT kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
     def handleIAMAT(self, args):
         if len(args) != 3:
-            print "IAMAT requires 3 paramaters"
+            print "IAMAT requires 3 parameters"
             return
         client_location, lat_lon, timestamp = args
-        print "location: {0}, lat-lon: {1}, timestamp: {2}".format(client_location, lat_lon, timestamp)
+        print "{0} says location: {1}, lat-lon: {2}, timestamp: {3}".format(self.factory.server_name, client_location, lat_lon, timestamp)
 
         # Format AT response
         time_difference = time.mktime(datetime.now().timetuple()) - float(timestamp)
         response = "AT {0} +{1} {2} {3} {4}".format(self.factory.server_name, time_difference, client_location, lat_lon, timestamp)
 
-        print response
+        self.sendLine(response)
+        self.factory.clients[client_location] = { "message" : response, "timestamp" : timestamp }
+        # Broadcast client location change to neighbors
+        self.notifyNeighborsLocationChanged(response)
 
+    # ie. WHATSAT kiwi.cs.ucla.edu 10 5
     def handleWHATSAT(self, args):
         if len(args) != 3:
-            print "WHATSAT requires 3 paramaters"
+            print "WHATSAT requires 3 parameters"
             return
         client_location, radius, bound = args
-        print "location: {0}, radius: {1}, bound: {2}".format(client_location, radius, bound)
+        print "{0} location: {1}, radius: {2}, bound: {3}".format(this.factory.server_name, client_location, radius, bound)
 
-    def connectionMade(self):
-        # self.transport.write("Connection made")
-        self.factory.connections += 1
-        print "Connections made. Total: {0}".format(self.factory.connections)
+    # ie. AT Alford +0.263873386 kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
+    def handleAT(self, args):
+        if len(args) != 5:
+            print "IAMAT requires 5 parameters"
+            return
+        servername, time_difference, client_location, lat_lon, timestamp = args
 
-    def connectionLost(self, reason):
-        self.factory.connections -= 1
-        print "Connections lost. Total: {0}".format(self.factory.connections)
+        if (client_location in self.factory.clients) and (timestamp <= self.factory.clients[client_location]["timestamp"]):
+            return
+
+        print "{0} received AT from {1}: ".format(self.factory.server_name, servername)
+        message = "AT {0} {1} {2} {3} {4}".format(servername, time_difference, client_location, lat_lon, timestamp)
+        self.factory.clients[client_location] = { "message" : message, "timestamp" : timestamp }
+        self.notifyNeighborsLocationChanged(message)
+
+    def notifyNeighborsLocationChanged(self, message):
+        neighbors = SERVERS[self.factory.server_name]["neighbors"]
+        for n in neighbors:
+            reactor.connectTCP('localhost', SERVERS[n]["port"], HerdClient(message))
+            print "{0} sends location update to {1}".format(self.factory.server_name, n)
+
+    # def connectionMade(self):
+    #     # self.transport.write("Connection made")
+    #     self.factory.connections += 1
+    #     print "Connections made. Total: {0}".format(self.factory.connections)
+
+    # def connectionLost(self, reason):
+    #     self.factory.connections -= 1
+    #     print "Connections lost. Total: {0}".format(self.factory.connections)
 
 
 
@@ -69,6 +107,7 @@ class HerdServer(protocol.ServerFactory):
     def __init__(self, server_name):
         self.connections = 0
         self.server_name = server_name
+        self.clients = {}
 
     def buildProtocol(self, addr):
         return HerdServerProtocol(self)
@@ -82,7 +121,6 @@ class HerdClientProtocol(LineReceiver):
         self.factory = factory
 
     def connectionMade(self):
-        print "server connection made" + self.factory.message
         self.sendLine(self.factory.message)
 
     def lineReceived(self, line):
@@ -92,12 +130,6 @@ class HerdClientProtocol(LineReceiver):
 class HerdClient(protocol.ClientFactory):
     def __init__(self, message):
         self.message = message
-
-    def startedConnecting(self, connector):
-        print "client started connecting"
-
-    def connectionMade(self):
-        print "client connection made"
 
     def buildProtocol(self, addr):
         return HerdClientProtocol(self)
@@ -110,7 +142,7 @@ def main():
         return
 
     factory = HerdServer(sys.argv[1])
-    reactor.listenTCP(SERVERS[sys.argv[1]], factory)
+    reactor.listenTCP(SERVERS[sys.argv[1]]["port"], factory)
     reactor.run()
 
 
