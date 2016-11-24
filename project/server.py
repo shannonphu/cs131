@@ -1,27 +1,26 @@
 import sys, time, logging, re, json, os 
+import conf
 from datetime import datetime
 from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.web.client import getPage
 
-API_KEY = "AIzaSyCtI8-UG2UdLxvClOSE4U2AfAwvdclFJ_M"
-API_ROOT_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=AIzaSyCtI8-UG2UdLxvClOSE4U2AfAwvdclFJ_M&"
-
+API_ROOT_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key={0}&".format(conf.API_KEY)
 
 SERVERS = {
-    "Alford"   : { "port" : 12201,
+    "Alford"   : { "port" : 13320,
                    "neighbors": ["Hamilton", "Welsh"]
                  }, 
-    "Ball"     : { "port" : 12202,
+    "Ball"     : { "port" : 13321,
                    "neighbors": ["Holiday", "Welsh"]
                  },
-    "Hamilton" : { "port" : 12203,
+    "Hamilton" : { "port" : 13322,
                    "neighbors": ["Holiday"]
                  },
-    "Holiday"  : { "port" : 12204,
+    "Holiday"  : { "port" : 13323,
                    "neighbors": ["Hamilton", "Ball"]
                  }, 
-    "Welsh"    : { "port" : 12205,
+    "Welsh"    : { "port" : 13324,
                    "neighbors": ["Alford", "Ball"]
                  }
 }
