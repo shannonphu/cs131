@@ -27,8 +27,6 @@ class HerdServerProtocol(LineReceiver):
         self.factory = factory
 
     def lineReceived(self, line):
-        # print "Line received: {0}".format(line)
-
         # Get command from first word
         command = line.split()
 
@@ -42,9 +40,8 @@ class HerdServerProtocol(LineReceiver):
             # print "got an AT"
             self.handleAT(command[1:])
         else:
-            print "unrecognized command"
+            print "? {0}".format(command)
 
-        # reactor.connectTCP('localhost', 8080, HerdClient(line))
 
     # ie. IAMAT kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
     def handleIAMAT(self, args):
@@ -91,15 +88,6 @@ class HerdServerProtocol(LineReceiver):
         for n in neighbors:
             reactor.connectTCP('localhost', SERVERS[n]["port"], HerdClient(message))
             print "{0} sends location update to {1}".format(self.factory.server_name, n)
-
-    # def connectionMade(self):
-    #     # self.transport.write("Connection made")
-    #     self.factory.connections += 1
-    #     print "Connections made. Total: {0}".format(self.factory.connections)
-
-    # def connectionLost(self, reason):
-    #     self.factory.connections -= 1
-    #     print "Connections lost. Total: {0}".format(self.factory.connections)
 
 
 
