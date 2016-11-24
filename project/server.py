@@ -1,7 +1,12 @@
-import sys, time, logging
+import sys, time, logging, re, json, os 
 from datetime import datetime
 from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
+from twisted.web.client import getPage
+
+API_KEY = "AIzaSyCtI8-UG2UdLxvClOSE4U2AfAwvdclFJ_M"
+API_ROOT_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key=AIzaSyCtI8-UG2UdLxvClOSE4U2AfAwvdclFJ_M&"
+
 
 SERVERS = {
     "Alford"   : { "port" : 12201,
@@ -37,20 +42,17 @@ class HerdServerProtocol(LineReceiver):
             self.handleAT(command[1:])
         else:
             log = "? {0}".format(line)
-            print log
             logging.error(log)
 
 
     # ie. IAMAT kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
     def handleIAMAT(self, args):
         if len(args) != 3:
-            print "IAMAT requires 3 parameters"
             logging.error("IAMAT requires 3 parameters")
             return
 
         client_location, lat_lon, timestamp = args
         log = "{0} server received from client location: {1}, lat-lon: {2}, timestamp: {3}".format(self.factory.server_name, client_location, lat_lon, timestamp)
-        print log
         logging.info(log)
 
         # Format AT response
@@ -67,13 +69,40 @@ class HerdServerProtocol(LineReceiver):
         if len(args) != 3:
             print "WHATSAT requires 3 parameters"
             return
+
         client_location, radius, bound = args
-        print "{0} location: {1}, radius: {2}, bound: {3}".format(this.factory.server_name, client_location, radius, bound)
+        radius = int(radius)
+        bound = int(bound)
+
+        if radius > 50 or bound > 20:
+            logging.error("WHATSAT radius must be at max 50 and bound must be at max 20")
+            return
+
+        log = "WHATSAT command made to {0} and received parameters location: {1}, radius: {2}, bound: {3}".format(self.factory.server_name, client_location, radius, bound)
+        logging.info(log)
+
+        # get stored message of where the current client is
+        command = self.factory.clients[client_location]["message"]
+        split_command = command.split()[1:]
+        server_name, time_difference, client_location, lat_lon, timestamp = split_command
+
+        # parse out lat/lon of location
+        lat_lon = re.sub(r'[-]', ' -', lat_lon)
+        lat_lon = re.sub(r'[+]', ' +', lat_lon).split()
+        coordinate = lat_lon[0] + "," + lat_lon[1]
+
+        request = "{0}location={1}&radius={2}&sensor=false".format(API_ROOT_URL, coordinate, radius)
+        log = "accessed API endpoint: {0}".format(request)
+        logging.info(log)
+        response = getPage(request)
+        logging.info(command)
+        response.addCallback(callback = lambda x:(self.getJSON(x, client_location, int(bound))))
+
 
     # ie. AT Alford +0.263873386 kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
     def handleAT(self, args):
         if len(args) != 5:
-            print "IAMAT requires 5 parameters"
+            logging.info("IAMAT requires 5 parameters")
             return
         servername, time_difference, client_location, lat_lon, timestamp = args
 
@@ -81,7 +110,6 @@ class HerdServerProtocol(LineReceiver):
             return
 
         log = "{0} received AT {1} {2} {3} {4} {5}: ".format(self.factory.server_name, servername, time_difference, client_location, lat_lon, timestamp)
-        print log
         logging.info(log)
         message = "AT {0} {1} {2} {3} {4}".format(servername, time_difference, client_location, lat_lon, timestamp)
         self.factory.clients[client_location] = { "message" : message, "timestamp" : timestamp }
@@ -92,17 +120,24 @@ class HerdServerProtocol(LineReceiver):
         for n in neighbors:
             reactor.connectTCP('localhost', SERVERS[n]["port"], HerdClient(message))
             log = "{0} sends location update to {1}".format(self.factory.server_name, n)
-            print log
             logging.info(log)
 
-
+    def getJSON(self, data, client_location, bound):
+        # print "enter getJSON with {0} {1} {2}".format(data, client_location, bound)
+        json_resp = json.loads(data)
+        json_resp = json_resp["results"]
+        json_resp = json_resp[:bound]
+        logging.info(json.dumps(json_resp, indent=5))
 
 class HerdServer(protocol.ServerFactory):
     def __init__(self, server_name):
         self.connections = 0
         self.server_name = server_name
         self.clients = {}
-        logging.basicConfig(filename = server_name + "-debug.log", level=logging.DEBUG)
+        filename = server_name.lower() + "-debug.log"
+        if os.path.isfile(filename): 
+            os.remove(filename)
+        logging.basicConfig(filename = filename, level=logging.DEBUG)
         log = '{0} server started at port {1}'.format(self.server_name, SERVERS[self.server_name]["port"])
         logging.info(log)
 
@@ -119,9 +154,6 @@ class HerdClientProtocol(LineReceiver):
 
     def connectionMade(self):
         self.sendLine(self.factory.message)
-
-    def lineReceived(self, line):
-        print line + "received by client"
 
 
 class HerdClient(protocol.ClientFactory):
