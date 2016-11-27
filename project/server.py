@@ -1,4 +1,4 @@
-import sys, time, logging, re, json, os 
+import sys, time, logging, re, json, os, urllib2
 import conf
 from datetime import datetime
 from twisted.internet import reactor, protocol
@@ -8,19 +8,19 @@ from twisted.web.client import getPage
 API_ROOT_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key={0}&".format(conf.API_KEY)
 
 SERVERS = {
-    "Alford"   : { "port" : 13320,
+    "Alford"   : { "port" : conf.PORT_NUM["Alford"],
                    "neighbors": ["Hamilton", "Welsh"]
                  }, 
-    "Ball"     : { "port" : 13321,
+    "Ball"     : { "port" : conf.PORT_NUM["Ball"],
                    "neighbors": ["Holiday", "Welsh"]
                  },
-    "Hamilton" : { "port" : 13322,
+    "Hamilton" : { "port" : conf.PORT_NUM["Hamilton"],
                    "neighbors": ["Holiday"]
                  },
-    "Holiday"  : { "port" : 13323,
+    "Holiday"  : { "port" : conf.PORT_NUM["Holiday"],
                    "neighbors": ["Hamilton", "Ball"]
                  }, 
-    "Welsh"    : { "port" : 13324,
+    "Welsh"    : { "port" : conf.PORT_NUM["Welsh"],
                    "neighbors": ["Alford", "Ball"]
                  }
 }
@@ -93,9 +93,14 @@ class HerdServerProtocol(LineReceiver):
         request = "{0}location={1}&radius={2}&sensor=false".format(API_ROOT_URL, coordinate, radius)
         log = "accessed API endpoint: {0}".format(request)
         logging.info(log)
-        response = getPage(request)
+        response = urllib2.urlopen(request)
+        data = json.load(response)
+        json_resp = data["results"]
+        json_resp = json_resp[:bound]
         logging.info(command)
-        response.addCallback(callback = lambda x:(self.getJSON(x, client_location, int(bound))))
+        logging.info(json.dumps(json_resp, indent=5))
+
+        #response.addCallback(callback = lambda x:(self.getJSON(x, client_location, int(bound))))
 
 
     # ie. AT Alford +0.263873386 kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
