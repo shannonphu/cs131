@@ -157,11 +157,7 @@ class HerdClientProtocol(LineReceiver):
         self.factory = factory
 
     def connectionMade(self):
-        logging.info("Connection to server: {0} made.".format(self.factory.server_name))
         self.sendLine(self.factory.message)
-
-    def connectionLost(self, reason):
-        logging.info("Client connection to server {0} disconnected.".format(self.factory.server_name)) 
 
 class HerdClient(protocol.ClientFactory):
     def __init__(self, message):
