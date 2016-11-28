@@ -58,7 +58,7 @@ class HerdServerProtocol(LineReceiver):
         time_difference = time.mktime(datetime.now().timetuple()) - float(timestamp)
         response = "AT {0} +{1} {2} {3} {4}".format(self.factory.server_name, time_difference, client_location, lat_lon, timestamp)
 
-        self.sendLine(response)
+        # self.sendLine(response)
         self.factory.clients[client_location] = { "message" : response, "timestamp" : timestamp }
         # Broadcast client location change to neighbors
         self.notifyNeighborsLocationChanged(response)
@@ -157,8 +157,11 @@ class HerdClientProtocol(LineReceiver):
         self.factory = factory
 
     def connectionMade(self):
+        logging.info("Connection to server: {0} made.".format(self.factory.server_name))
         self.sendLine(self.factory.message)
 
+    def connectionLost(self, reason):
+        logging.info("Client connection to server {0} disconnected.".format(self.factory.server_name)) 
 
 class HerdClient(protocol.ClientFactory):
     def __init__(self, message):
