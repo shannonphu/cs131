@@ -10,25 +10,25 @@ sleep 2
 
 {
 	sleep 1
-	echo IAMAT latte +37.322752-122.030836 1401072205.798801
+	echo IAMAT kiwi.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
 	sleep 1
 } | telnet localhost 11581
 
 {
 	sleep 1
-	echo IAMAT coffee +34.151324-118.028232 1401496386.27158
+	echo IAMAT apple.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
 	sleep 1
 } | telnet localhost 11581
 
 {
 	sleep 1
-	echo IAMAT nowhere +35-120 1401496586.27158
+	echo IAMAT banana.cs.ucla.edu +34.068930-118.445127 1479413884.392014450
 	sleep 1
 } | telnet localhost 11582
 
 {
 	sleep 1
-	echo WHATSAT latte 40 5
+	echo WHATSAT banana.cs.ucla.edu 10 5
 	sleep 1
 } | telnet localhost 11581
 
