@@ -1,0 +1,5 @@
+To run: python server.py Alford
+		telnet localhost 11581
+		<IAMAT, WHATSAT, etc commands in client side>
+
+To run test script: ./test.sh
